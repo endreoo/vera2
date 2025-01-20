@@ -2,152 +2,199 @@ import React, { useState } from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFViewer, Font } from '@react-pdf/renderer';
 import { pdf } from '@react-pdf/renderer';
 
-// Register fonts - using a simpler font setup
+// Register fonts - using multiple fonts for better typography
 Font.register({
-  family: 'Helvetica'
+  family: 'Roboto',
+  fonts: [
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-light-webfont.ttf', fontWeight: 300 },
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-regular-webfont.ttf', fontWeight: 400 },
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-medium-webfont.ttf', fontWeight: 500 },
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-bold-webfont.ttf', fontWeight: 700 }
+  ]
 });
 
 // Create styles
 const styles = StyleSheet.create({
   page: {
     padding: 50,
-    fontFamily: 'Helvetica',
-    fontSize: 8,
-    lineHeight: 1.4,
+    fontFamily: 'Roboto',
+    fontSize: 10,
+    lineHeight: 1.6,
     backgroundColor: '#ffffff',
     color: '#1e293b'
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingBottom: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e2e8f0'
+    marginBottom: 40,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    borderBottomStyle: 'solid',
+    alignItems: 'flex-start'
   },
   companyInfo: {
-    flex: 2.5,
-    marginRight: 20,
-    marginBottom: 0
+    flex: 1,
+    marginRight: 40,
+    backgroundColor: '#F8FAFC',
+    padding: 20,
+    borderRadius: 8,
+    minWidth: '45%',
+    maxWidth: '45%'
   },
   invoiceSection: {
-    width: 220,
-    alignItems: 'flex-end'
+    flex: 1,
+    minWidth: '45%',
+    maxWidth: '45%',
+    backgroundColor: '#F8FAFC',
+    padding: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10
   },
   companyName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 32,
+    fontSize: 16,
+    letterSpacing: 0.5,
+    fontWeight: 700,
+    marginBottom: 16,
     color: '#0f172a'
   },
-  hotelName: {
-    fontSize: 20,
-    marginBottom: 12,
-    color: '#475569'
-  },
-  companyLocation: {
-    fontSize: 12,
+  detailText: {
+    fontSize: 11,
     marginBottom: 8,
-    color: '#475569'
-  },
-  companyDetails: {
-    marginTop: 8,
-    color: '#64748b',
-    fontSize: 10,
-    lineHeight: 1.6
-  },
-  detailRow: {
-    marginBottom: 3
+    color: '#475569',
+    fontWeight: 400,
+    lineHeight: 1.4
   },
   invoiceTitle: {
     fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontWeight: 700,
+    marginBottom: 24,
     color: '#0f172a',
-    textAlign: 'right'
+    textAlign: 'center'
   },
   invoiceBox: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#f8fafc',
-    borderRadius: 4
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16
   },
   invoiceRow: {
     flexDirection: 'row',
-    marginBottom: 3
+    justifyContent: 'flex-start',
+    marginBottom: 8,
+    alignItems: 'center'
   },
   invoiceLabel: {
-    width: 70,
-    color: '#64748b',
-    fontSize: 8
+    color: '#475569',
+    fontSize: 11,
+    marginRight: 16,
+    width: '30%',
+    textAlign: 'left'
+  },
+  invoiceValue: {
+    fontSize: 11,
+    color: '#0f172a',
+    fontWeight: 500,
+    textAlign: 'left',
+    width: '70%'
   },
   table: {
-    marginTop: 0,
-    marginBottom: 16
+    marginTop: 20,
+    marginBottom: 20
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#f1f5f9',
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    marginBottom: 8,
-    borderRadius: 4
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    marginBottom: 14,
+    borderRadius: 8,
+    fontWeight: 500
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e2e8f0'
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    borderBottomStyle: 'solid'
   },
   description: { 
     width: '35%',
-    fontSize: 8
+    fontSize: 10,
+    color: '#0f172a',
+    fontWeight: 400
   },
   date: { 
     width: '12%', 
     textAlign: 'center',
-    fontSize: 8
+    fontSize: 10,
+    color: '#475569'
   },
   nights: { 
     width: '10%', 
     textAlign: 'center',
-    fontSize: 8
+    fontSize: 9,
+    color: '#475569'
   },
   rate: { 
     width: '12%', 
     textAlign: 'right',
-    fontSize: 8
+    fontSize: 9,
+    color: '#475569'
   },
   vat: { 
     width: '8%', 
     textAlign: 'center',
-    fontSize: 8
+    fontSize: 9,
+    color: '#475569'
   },
   total: { 
     width: '11%', 
     textAlign: 'right',
-    fontSize: 8
+    fontSize: 9,
+    color: '#0f172a',
+    fontWeight: 'medium'
   },
   totalsBox: {
     alignSelf: 'flex-end',
-    width: 180,
-    marginBottom: 16,
-    padding: 12,
+    width: 240,
+    marginTop: 30,
+    marginBottom: 30,
+    padding: 20,
     backgroundColor: '#f8fafc',
-    borderRadius: 4
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 3,
-    fontSize: 8
+    marginBottom: 8,
+    fontSize: 9
+  },
+  totalLabel: {
+    color: '#64748b'
+  },
+  totalValue: {
+    color: '#0f172a',
+    fontWeight: 'medium'
   },
   totalDivider: {
-    borderTopWidth: 0.5,
+    borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    paddingTop: 6,
-    marginTop: 6
+    borderTopStyle: 'solid',
+    paddingTop: 8,
+    marginTop: 8
+  },
+  grandTotal: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#0f172a'
   },
   notes: {
     marginTop: 16,
@@ -203,16 +250,14 @@ export const InvoicePDF = ({ invoice }) => {
         <View style={styles.header}>
           <View style={styles.companyInfo}>
             <Text style={styles.companyName}>Veraclub Zanzibar LTD</Text>
-            <Text style={styles.hotelName}>{safeInvoice.property}</Text>
-            <Text style={styles.companyLocation}>{safeInvoice.location}</Text>
-            <View style={styles.companyDetails}>
-              <Text>P.O Box {safeInvoice.poBox}</Text>
-              <Text>TINN: {safeInvoice.tinnNumber}</Text>
-              <Text>Reg No: {safeInvoice.registrationNumber}</Text>
-              <Text>Tel: {safeInvoice.phone}</Text>
-              <Text>Account: {safeInvoice.accountNumber}</Text>
-              <Text>Swift: {safeInvoice.swiftCode}</Text>
-            </View>
+            <Text style={styles.detailText}>{safeInvoice.property}</Text>
+            <Text style={styles.detailText}>{safeInvoice.location}</Text>
+            <Text style={styles.detailText}>P.O Box {safeInvoice.poBox}</Text>
+            <Text style={styles.detailText}>TINN: {safeInvoice.tinnNumber}</Text>
+            <Text style={styles.detailText}>Reg No: {safeInvoice.registrationNumber}</Text>
+            <Text style={styles.detailText}>Tel: {safeInvoice.phone}</Text>
+            <Text style={styles.detailText}>Account: {safeInvoice.accountNumber}</Text>
+            <Text style={styles.detailText}>Swift: {safeInvoice.swiftCode}</Text>
           </View>
 
           <View style={styles.invoiceSection}>
@@ -220,19 +265,19 @@ export const InvoicePDF = ({ invoice }) => {
             <View style={styles.invoiceBox}>
               <View style={styles.invoiceRow}>
                 <Text style={styles.invoiceLabel}>Date:</Text>
-                <Text>{new Date(safeInvoice.date).toLocaleDateString('en-GB')}</Text>
+                <Text style={styles.invoiceValue}>{new Date(safeInvoice.date).toLocaleDateString('en-GB')}</Text>
               </View>
               <View style={styles.invoiceRow}>
                 <Text style={styles.invoiceLabel}>Due Date:</Text>
-                <Text>{new Date(safeInvoice.dueDate).toLocaleDateString('en-GB')}</Text>
+                <Text style={styles.invoiceValue}>{new Date(safeInvoice.dueDate).toLocaleDateString('en-GB')}</Text>
               </View>
               <View style={styles.invoiceRow}>
                 <Text style={styles.invoiceLabel}>Invoice #:</Text>
-                <Text>{safeInvoice.invoiceNumber}</Text>
+                <Text style={styles.invoiceValue}>{safeInvoice.invoiceNumber}</Text>
               </View>
               <View style={styles.invoiceRow}>
-                <Text style={styles.invoiceLabel}>Reservation #:</Text>
-                <Text>{safeInvoice.reservationNumber}</Text>
+                <Text style={styles.invoiceLabel}>Reservation:</Text>
+                <Text style={styles.invoiceValue}>{safeInvoice.reservationNumber}</Text>
               </View>
             </View>
           </View>
@@ -263,16 +308,16 @@ export const InvoicePDF = ({ invoice }) => {
 
         <View style={styles.totalsBox}>
           <View style={styles.totalRow}>
-            <Text>Subtotal:</Text>
-            <Text>${safeInvoice.subtotal.toFixed(2)}</Text>
+            <Text style={styles.totalLabel}>Subtotal:</Text>
+            <Text style={styles.totalValue}>${safeInvoice.subtotal.toFixed(2)}</Text>
           </View>
           <View style={styles.totalRow}>
-            <Text>VAT (15%):</Text>
-            <Text>${safeInvoice.tax.toFixed(2)}</Text>
+            <Text style={styles.totalLabel}>VAT (15%):</Text>
+            <Text style={styles.totalValue}>${safeInvoice.tax.toFixed(2)}</Text>
           </View>
           <View style={[styles.totalRow, styles.totalDivider]}>
-            <Text style={{ fontWeight: 'bold' }}>Total:</Text>
-            <Text style={{ fontWeight: 'bold' }}>${safeInvoice.total.toFixed(2)}</Text>
+            <Text style={styles.grandTotal}>Total:</Text>
+            <Text style={styles.grandTotal}>${safeInvoice.total.toFixed(2)}</Text>
           </View>
         </View>
       </Page>
