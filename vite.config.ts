@@ -3,7 +3,13 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    include: ['lucide-react']
+  server: {
+    host: '0.0.0.0',
+    port: 5172,
+    strictPort: true,
+    hmr: {
+      host: '37.27.142.148',
+      port: 5172
+    }
   }
 });
