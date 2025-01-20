@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import InvoicePreview, { InvoicePDF } from '../components/InvoicePreview';
+import InvoicePreview from '../components/InvoicePreview';
+import { InvoiceTemplate } from '../templates/InvoiceTemplate';
 import Settings from '../components/Settings';
+import EmailDialog from '../components/EmailDialog';
 import { hotels } from '../data/hotels';
 import { pdf } from '@react-pdf/renderer';
 
@@ -15,6 +17,8 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [selectedEmailInvoice, setSelectedEmailInvoice] = useState(null);
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -177,13 +181,34 @@ function Dashboard() {
       };
 
       setInvoices(prev => [newInvoice, ...prev]);
-      setSelectedInvoice(newInvoice);
       setReservationNumber('');
 
       // Automatically send email
       try {
         console.log('Starting automatic email send...');
-        const blob = await pdf(<InvoicePDF invoice={newInvoice} />).toBlob();
+        const blob = await pdf(
+          <InvoiceTemplate 
+            hotel={newInvoice.property === 'Sunset Beach' ? 'Sunset Beach' : 'Zanzibar Village'}
+            invoiceData={{
+              date: new Date(newInvoice.date).toLocaleDateString('en-GB'),
+              dueDate: new Date(newInvoice.dueDate).toLocaleDateString('en-GB'),
+              invoiceNumber: newInvoice.invoiceNumber,
+              reservation: newInvoice.reservationNumber,
+              items: newInvoice.items.map(item => ({
+                description: item.description,
+                checkIn: new Date(item.checkIn).toLocaleDateString('en-GB'),
+                checkOut: new Date(item.checkOut).toLocaleDateString('en-GB'),
+                nights: item.nights,
+                ratePerNight: item.ratePerNight,
+                vat: 15,
+                total: item.total
+              })),
+              subtotal: newInvoice.subtotal,
+              vatAmount: newInvoice.tax,
+              total: newInvoice.total
+            }}
+          />
+        ).toBlob();
         
         // Get default emails
         const defaultEmailsResponse = await fetch(`${apiUrl}/settings/emails`, {
@@ -239,8 +264,8 @@ function Dashboard() {
             throw new Error(errorData.error || `Failed to send email to ${recipient}`);
           }
         }
-        console.log('Emails sent automatically to all recipients');
-        alert('Invoice generated and sent successfully!');
+        console.log('Emails sent successfully to all recipients');
+        alert('Invoice Generated and Sent');
       } catch (emailError) {
         console.error('Error sending automatic email:', emailError);
         alert('Invoice generated but email sending failed: ' + emailError.message);
@@ -287,6 +312,16 @@ function Dashboard() {
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* Email Dialog */}
+      <EmailDialog 
+        isOpen={showEmailDialog} 
+        onClose={() => {
+          setShowEmailDialog(false);
+          setSelectedEmailInvoice(null);
+        }}
+        invoice={selectedEmailInvoice}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
@@ -358,15 +393,6 @@ function Dashboard() {
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-lg font-semibold">Generated Invoices</h2>
-                    <button
-                      onClick={() => setShowSettings(true)}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center gap-1 text-sm"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                      </svg>
-                      Email Settings
-                    </button>
                   </div>
                   {invoices.length === 0 ? (
                     <p className="text-gray-500">No invoices generated yet.</p>
@@ -412,8 +438,8 @@ function Dashboard() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // TODO: Implement send mail functionality
-                                alert('Send mail functionality coming soon!');
+                                setSelectedEmailInvoice(invoice);
+                                setShowEmailDialog(true);
                               }}
                               className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1 text-sm"
                             >
