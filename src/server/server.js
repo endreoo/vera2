@@ -3,8 +3,10 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import { promises as fs } from 'fs';
+import fsSync from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import https from 'https';
 import authRoutes from './routes/auth.js';
 import { authenticateToken } from './middleware/auth.js';
 
@@ -14,14 +16,14 @@ const __dirname = dirname(__filename);
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5171;
+const PORT = process.env.PORT || 3000;
 
 // Add JWT secret to environment
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'hotelonline-secret-key';
 
 // CORS Configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://37.27.142.148:5172',
+  origin: ['http://veraclub.hotelonline.co', 'https://veraclub.hotelonline.co'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -47,34 +49,6 @@ app.use((req, res, next) => {
 
 // API Routes FIRST - before any static file handling
 app.use('/auth', authRoutes);
-
-// Settings file handling
-app.get('/settings/emails', async (req, res) => {
-  const filePath = join(__dirname, 'data', 'settings.txt');
-  try {
-    const data = await fs.readFile(filePath, 'utf8');
-    res.setHeader('Content-Type', 'text/plain');
-    res.send(data);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      await fs.writeFile(filePath, '');
-      res.setHeader('Content-Type', 'text/plain');
-      res.send('');
-    } else {
-      res.status(500).send('Error reading file');
-    }
-  }
-});
-
-app.post('/settings/emails', express.text(), async (req, res) => {
-  const filePath = join(__dirname, 'data', 'settings.txt');
-  try {
-    await fs.writeFile(filePath, req.body);
-    res.send('OK');
-  } catch (error) {
-    res.status(500).send('Error writing file');
-  }
-});
 
 // Other API routes
 app.post('/ezee/bookings', authenticateToken, async (req, res) => {
@@ -197,8 +171,15 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, '../../dist/index.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+// HTTPS Configuration
+const httpsOptions = {
+  key: fsSync.readFileSync('/etc/letsencrypt/live/veraclub.hotelonline.co/privkey.pem'),
+  cert: fsSync.readFileSync('/etc/letsencrypt/live/veraclub.hotelonline.co/fullchain.pem')
+};
+
+// Create HTTPS server
+https.createServer(httpsOptions, app).listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on https://0.0.0.0:${PORT}`);
   console.log(`API URL: ${process.env.API_BASE_URL}`);
   console.log(`CORS Origin: ${corsOptions.origin}`);
 }); 

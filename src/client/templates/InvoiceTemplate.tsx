@@ -1,108 +1,121 @@
-import React from 'react';
 import { Page, Document, StyleSheet, View, Text } from '@react-pdf/renderer';
 
-// Create styles
+// Updated styles for modern, clean look
 const styles = StyleSheet.create({
   page: {
     padding: 30,
     fontSize: 10,
     fontFamily: 'Helvetica',
     color: '#1a1a1a',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
   },
-  topSection: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 40,
-    borderBottom: 1,
-    borderBottomColor: '#e5e7eb',
-    paddingBottom: 30,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  companyDetails: {
+  hotelInfo: {
+    width: '55%',
     lineHeight: 1.5,
-    width: '50%',
-  },
-  companyName: {
-    fontSize: 18,
-    fontFamily: 'Helvetica-Bold',
-    marginBottom: 8,
-    color: '#111827',
   },
   hotelName: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 12,
-    color: '#4f46e5',
+    color: '#22223b',
+    marginBottom: 4,
   },
-  invoiceInfo: {
+  hotelAddress: {
+    marginBottom: 2,
+  },
+  invoiceInfoBox: {
     width: '40%',
     backgroundColor: '#f8fafc',
-    padding: 20,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    padding: 16,
+    alignItems: 'flex-start',
   },
   infoLabel: {
     color: '#6b7280',
-    marginBottom: 6,
     fontSize: 9,
     textTransform: 'uppercase',
+    marginBottom: 2,
   },
   infoValue: {
     fontFamily: 'Helvetica-Bold',
     color: '#111827',
-    fontSize: 11,
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  billToLabel: {
+    color: '#6366f1',
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 12,
+    marginTop: 16,
+    marginBottom: 2,
+  },
+  billToValue: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 13,
+    color: '#22223b',
+    marginBottom: 12,
+  },
+  divider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    marginVertical: 12,
   },
   table: {
-    flexDirection: 'column',
     width: '100%',
-    marginTop: 30,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
     overflow: 'hidden',
-    marginBottom: 30,
+    marginBottom: 24,
   },
   tableHeader: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    fontWeight: 'bold',
     backgroundColor: '#f8fafc',
     color: '#374151',
     fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
     textTransform: 'uppercase',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
   tableRow: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     color: '#374151',
   },
-  description: { width: '35%' },
-  checkIn: { width: '12%' },
-  checkOut: { width: '12%' },
-  nights: { width: '10%' },
-  rate: { width: '12%', color: '#111827' },
-  vat: { width: '9%' },
-  total: { width: '10%', fontFamily: 'Helvetica-Bold', color: '#111827' },
-  totals: {
-    marginTop: 30,
+  tableRowAlt: {
+    backgroundColor: '#f3f4f6',
+  },
+  description: { width: '32%' },
+  checkIn: { width: '13%' },
+  checkOut: { width: '13%' },
+  nights: { width: '8%', textAlign: 'right' },
+  rate: { width: '12%', textAlign: 'right', color: '#111827' },
+  vat: { width: '8%', textAlign: 'right' },
+  total: { width: '14%', textAlign: 'right', fontFamily: 'Helvetica-Bold', color: '#111827' },
+  totalsBox: {
     alignSelf: 'flex-end',
     backgroundColor: '#f8fafc',
     padding: 24,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    width: 300,
+    width: 260,
+    marginTop: 12,
   },
   totalRow: {
     flexDirection: 'row',
-    marginTop: 8,
-    color: '#374151',
     justifyContent: 'space-between',
+    marginBottom: 6,
+    color: '#374151',
   },
   totalLabel: {
     fontFamily: 'Helvetica-Bold',
@@ -114,8 +127,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   grandTotal: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
     color: '#111827',
@@ -123,12 +136,12 @@ const styles = StyleSheet.create({
   grandTotalLabel: {
     fontSize: 14,
     fontFamily: 'Helvetica-Bold',
-    color: '#111827',
+    color: '#6366f1',
   },
   grandTotalValue: {
     fontSize: 14,
     fontFamily: 'Helvetica-Bold',
-    color: '#4f46e5',
+    color: '#6366f1',
   },
 });
 
@@ -151,59 +164,62 @@ interface InvoiceData {
   subtotal: number;
   vatAmount: number;
   total: number;
+  customerName?: string;
 }
 
 interface InvoiceProps {
-  hotel: 'Sunset Beach' | 'Zanzibar Village';
+  hotel: string;
   invoiceData: InvoiceData;
 }
 
-export const InvoiceTemplate: React.FC<InvoiceProps> = ({ hotel, invoiceData }) => (
+export const InvoiceTemplate = ({ hotel, invoiceData }: InvoiceProps): JSX.Element => (
   <Document>
     <Page size="A4" style={styles.page}>
-      <View style={styles.topSection}>
-        {/* Company Details */}
-        <View style={styles.companyDetails}>
-          <Text style={styles.companyName}>Veraclub Zanzibar LTD</Text>
-          <Text style={styles.hotelName}>{hotel}</Text>
-          <Text>Kiwengwa-Zanzibar (Tanzania)</Text>
-          <Text>P.O Box 2529</Text>
-          <Text>TINN: 300-101-496</Text>
-          <Text>Reg No: Z0000007238</Text>
-          <Text>Tel: 0779-414986</Text>
-          <Text>Account: 0400392000</Text>
-          <Text>Swift: PBZATZTZ</Text>
+      {/* Header Row */}
+      <View style={styles.headerRow}>
+        {/* Hotel Info */}
+        <View style={styles.hotelInfo}>
+          <Text style={styles.hotelName}>{hotel} Hotel</Text>
+          <Text style={styles.hotelAddress}>Kiwengwa-Zanzibar (Tanzania)</Text>
+          <Text style={styles.hotelAddress}>P.O Box 2529</Text>
+          <Text style={styles.hotelAddress}>TINN: 300-101-496</Text>
+          <Text style={styles.hotelAddress}>Registration No: Z0000007238</Text>
+          <Text style={styles.hotelAddress}>Phone: 0779-414986</Text>
+          <Text style={styles.hotelAddress}>Account No: 0400392000</Text>
+          <Text style={styles.hotelAddress}>Swift Code: PBZATZTZ</Text>
         </View>
-
-        {/* Invoice Info */}
-        <View style={styles.invoiceInfo}>
-          <View>
-            <Text style={styles.infoLabel}>Invoice #</Text>
-            <Text style={styles.infoValue}>{invoiceData.invoiceNumber}</Text>
-            <Text style={[styles.infoLabel, { marginTop: 8 }]}>Reservation</Text>
-            <Text style={styles.infoValue}>{invoiceData.reservation}</Text>
-            <Text style={[styles.infoLabel, { marginTop: 8 }]}>Date</Text>
-            <Text style={styles.infoValue}>{invoiceData.date}</Text>
-            <Text style={[styles.infoLabel, { marginTop: 8 }]}>Due Date</Text>
-            <Text style={styles.infoValue}>{invoiceData.dueDate}</Text>
-          </View>
+        {/* Invoice Info Box */}
+        <View style={styles.invoiceInfoBox}>
+          <Text style={styles.infoLabel}>DATE</Text>
+          <Text style={styles.infoValue}>{invoiceData.date}</Text>
+          <Text style={styles.infoLabel}>RESERVATION NUMBER</Text>
+          <Text style={styles.infoValue}>{invoiceData.reservation}</Text>
         </View>
       </View>
+
+      {/* Bill To Section */}
+      <Text style={styles.billToLabel}>Bill To:</Text>
+      <Text style={styles.billToValue}>{invoiceData.customerName || ''}</Text>
+
+      {/* Divider */}
+      <View style={styles.divider} />
 
       {/* Table */}
       <View style={styles.table}>
         <View style={styles.tableHeader}>
-          <Text style={styles.description}>Description</Text>
-          <Text style={styles.checkIn}>Check-in</Text>
-          <Text style={styles.checkOut}>Check-out</Text>
-          <Text style={styles.nights}>Nights</Text>
-          <Text style={styles.rate}>Rate/Night</Text>
+          <Text style={styles.description}>DESCRIPTION</Text>
+          <Text style={styles.checkIn}>CHECK-IN</Text>
+          <Text style={styles.checkOut}>CHECK-OUT</Text>
+          <Text style={styles.nights}>NIGHTS</Text>
+          <Text style={styles.rate}>RATE/NIGHT</Text>
           <Text style={styles.vat}>VAT</Text>
-          <Text style={styles.total}>Total</Text>
+          <Text style={styles.total}>TOTAL</Text>
         </View>
-
-        {invoiceData.items.map((item, index) => (
-          <View key={index} style={styles.tableRow}>
+        {invoiceData.items.map((item: InvoiceItem, idx: number) => (
+          <View
+            key={idx}
+            style={[styles.tableRow, idx % 2 === 1 && styles.tableRowAlt]}
+          >
             <Text style={styles.description}>{item.description}</Text>
             <Text style={styles.checkIn}>{item.checkIn}</Text>
             <Text style={styles.checkOut}>{item.checkOut}</Text>
@@ -215,8 +231,8 @@ export const InvoiceTemplate: React.FC<InvoiceProps> = ({ hotel, invoiceData }) 
         ))}
       </View>
 
-      {/* Totals Box (Right-aligned) */}
-      <View style={styles.totals}>
+      {/* Totals Box */}
+      <View style={styles.totalsBox}>
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Subtotal:</Text>
           <Text style={styles.totalValue}>${invoiceData.subtotal.toFixed(2)}</Text>

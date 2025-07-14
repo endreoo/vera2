@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InvoicePreview from '../components/InvoicePreview';
 import { InvoiceTemplate } from '../templates/InvoiceTemplate';
+import HtmlInvoiceTemplate from '../components/HtmlInvoiceTemplate';
+import InvoiceTypeSelector from '../components/InvoiceTypeSelector';
 import Settings from '../components/Settings';
 import EmailDialog from '../components/EmailDialog';
 import { hotels } from '../data/hotels';
 import { pdf } from '@react-pdf/renderer';
+import { createEmailService } from '../services/emailService';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -19,6 +22,7 @@ function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [selectedEmailInvoice, setSelectedEmailInvoice] = useState(null);
+  const [invoiceType, setInvoiceType] = useState('pdf'); // 'pdf' or 'html'
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -40,7 +44,7 @@ function Dashboard() {
     
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://37.27.142.148:5171';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://veraclub.hotelonline.co:3000';
       
       console.log('Making API call to:', `${apiUrl}/ezee/bookings`);
       console.log('Request payload:', {
@@ -194,6 +198,7 @@ function Dashboard() {
               dueDate: new Date(newInvoice.dueDate).toLocaleDateString('en-GB'),
               invoiceNumber: newInvoice.invoiceNumber,
               reservation: newInvoice.reservationNumber,
+              customerName: newInvoice.customerName,
               items: newInvoice.items.map(item => ({
                 description: item.description,
                 checkIn: new Date(item.checkIn).toLocaleDateString('en-GB'),
@@ -210,18 +215,9 @@ function Dashboard() {
           />
         ).toBlob();
         
-        // Get default emails
-        const defaultEmailsResponse = await fetch(`${apiUrl}/settings/emails`, {
-          headers: {
-            'Accept': 'text/plain'
-          }
-        });
-        
-        const defaultEmailsText = await defaultEmailsResponse.text();
-        const defaultEmails = defaultEmailsText
-          .split('\n')
-          .map(email => email.trim())
-          .filter(email => email && email.includes('@'));
+        // Get default emails using email service
+        const emailService = createEmailService();
+        const defaultEmails = await emailService.getAllEmails();
         
         if (defaultEmails.length === 0) {
           throw new Error('No email recipients configured. Please check Settings.');
@@ -250,19 +246,7 @@ function Dashboard() {
             }]
           };
 
-          const response = await fetch('http://37.27.142.148:3000/email/send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(emailData)
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to send email to ${recipient}`);
-          }
+          await emailService.sendEmail(emailData);
         }
         console.log('Emails sent successfully to all recipients');
         alert('Invoice Generated and Sent');
@@ -330,6 +314,12 @@ function Dashboard() {
               <h1 className="text-2xl font-semibold text-gray-900">Invoice Generator</h1>
             </div>
 
+            {/* Invoice Type Selector */}
+            <InvoiceTypeSelector 
+              invoiceType={invoiceType} 
+              onTypeChange={setInvoiceType} 
+            />
+
             <div className="mb-8">
               <div className="flex gap-4 items-center">
                 <select
@@ -383,85 +373,116 @@ function Dashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                <InvoicePreview 
-                  invoice={selectedInvoice} 
-                  onClose={() => setSelectedInvoice(null)}
-                />
+                
+                {/* Display based on selected type */}
+                {invoiceType === 'pdf' ? (
+                  <InvoicePreview invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
+                ) : (
+                  <div className="bg-white rounded-lg shadow-lg p-6">
+                    <HtmlInvoiceTemplate invoice={selectedInvoice} />
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg font-semibold">Generated Invoices</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Generated Invoices</h2>
+                    {invoices.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No invoices generated yet</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {invoices.map((invoice) => (
+                          <div
+                            key={invoice.id}
+                            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div 
+                                className="flex-grow cursor-pointer"
+                                onClick={() => setSelectedInvoice(invoice)}
+                              >
+                                <h3 className="font-medium text-gray-900">
+                                  Invoice #{invoice.invoiceNumber}
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  {invoice.customerName} - {invoice.property}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Reservation: {invoice.reservationNumber}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-gray-900">
+                                  ${invoice.total.toFixed(2)}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(invoice.date).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedInvoice(invoice);
+                                  // For PDF type, trigger download after a short delay
+                                  // For HTML type, the download button is in the template
+                                  if (invoiceType === 'pdf') {
+                                    setTimeout(() => {
+                                      document.getElementById('download-pdf-button')?.click();
+                                      setSelectedInvoice(null);
+                                    }, 100);
+                                  } else {
+                                    // For HTML type, just show the preview (download button is in template)
+                                    // The download will be handled by the HtmlInvoiceTemplate component
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex items-center gap-1 text-sm"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                                PDF
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedEmailInvoice(invoice);
+                                  setShowEmailDialog(true);
+                                }}
+                                className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1 text-sm"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                </svg>
+                                Email
+                              </button>
+                              <button
+                                onClick={() => setSelectedInvoice(invoice)}
+                                className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors flex items-center gap-1 text-sm"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                </svg>
+                                Preview
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {invoices.length === 0 ? (
-                    <p className="text-gray-500">No invoices generated yet.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {invoices.map((invoice) => (
-                        <div
-                          key={invoice.id}
-                          className="flex justify-between items-center border rounded p-4 hover:bg-gray-50"
-                        >
-                          <div className="flex-grow cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium">Invoice #{invoice.invoiceNumber}</p>
-                              <span className="text-sm px-2 py-0.5 bg-gray-100 rounded-full text-gray-600">
-                                {invoice.property}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                              Reservation: {invoice.reservationNumber} | Customer: {invoice.customerName}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Date: {new Date(invoice.date).toLocaleDateString('en-GB')} | Total: ${invoice.total.toFixed(2)}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedInvoice(invoice);
-                                // Trigger PDF download after a short delay to ensure the invoice preview is rendered
-                                setTimeout(() => {
-                                  document.getElementById('download-pdf-button')?.click();
-                                  setSelectedInvoice(null);
-                                }, 100);
-                              }}
-                              className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex items-center gap-1 text-sm"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                              PDF
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedEmailInvoice(invoice);
-                                setShowEmailDialog(true);
-                              }}
-                              className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1 text-sm"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                              </svg>
-                              Mail
-                            </button>
-                            <div 
-                              onClick={() => setSelectedInvoice(invoice)}
-                              className="cursor-pointer p-1.5 hover:bg-gray-100 rounded transition-colors"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                </div>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Invoice Preview</h2>
+                  <div className="text-center py-12 text-gray-500">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="mt-2">Select an invoice to preview</p>
+                  </div>
                 </div>
               </div>
             )}

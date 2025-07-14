@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { InvoiceTemplate } from '../templates/InvoiceTemplate';
+import { createEmailService } from '../services/emailService';
 
 function EmailDialog({ invoice, onClose, isOpen }) {
   const [defaultEmails, setDefaultEmails] = useState([]);
@@ -17,24 +18,14 @@ function EmailDialog({ invoice, onClose, isOpen }) {
 
   const fetchDefaultEmails = async () => {
     try {
-      const apiUrl = 'http://37.27.142.148:5171';
-      const response = await fetch(`${apiUrl}/settings/emails`, {
-        headers: {
-          'Accept': 'text/plain'
-        }
-      });
-      
-      const emailsText = await response.text();
-      const emails = emailsText
-        .split('\n')
-        .map(email => email.trim())
-        .filter(email => email && email.includes('@'));
-      
+      setError(null);
+      const emailService = createEmailService();
+      const emails = await emailService.getAllEmails();
       setDefaultEmails(emails);
       setSelectedEmails(emails); // Pre-select default emails
     } catch (error) {
       console.error('Error fetching emails:', error);
-      setError('Failed to load email addresses');
+      setError(error.message || 'Failed to load email addresses');
     }
   };
 
@@ -67,6 +58,7 @@ function EmailDialog({ invoice, onClose, isOpen }) {
             dueDate: new Date(invoice.dueDate).toLocaleDateString('en-GB'),
             invoiceNumber: invoice.invoiceNumber,
             reservation: invoice.reservationNumber,
+            customerName: invoice.customerName,
             items: invoice.items.map(item => ({
               description: item.description,
               checkIn: new Date(item.checkIn).toLocaleDateString('en-GB'),
@@ -91,6 +83,8 @@ function EmailDialog({ invoice, onClose, isOpen }) {
         reader.readAsDataURL(blob);
       });
 
+      const emailService = createEmailService();
+
       // Send to all selected recipients
       for (const recipient of selectedEmails) {
         const emailData = {
@@ -105,19 +99,7 @@ function EmailDialog({ invoice, onClose, isOpen }) {
           }]
         };
 
-        const response = await fetch('http://37.27.142.148:3000/email/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify(emailData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to send email to ${recipient}`);
-        }
+        await emailService.sendEmail(emailData);
       }
 
       alert('Emails sent successfully!');
@@ -185,8 +167,8 @@ function EmailDialog({ invoice, onClose, isOpen }) {
         </div>
 
         {error && (
-          <div className="mb-4 text-red-600">
-            {error}
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-600 text-sm">{error}</p>
           </div>
         )}
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { pdf } from '@react-pdf/renderer';
 import { InvoiceTemplate } from '../templates/InvoiceTemplate';
+import { createEmailService } from '../services/emailService';
 
 function InvoicePreview({ invoice, onClose }) {
   if (!invoice) return null;
@@ -12,6 +13,7 @@ function InvoicePreview({ invoice, onClose }) {
     dueDate: new Date(invoice.dueDate).toLocaleDateString('en-GB'),
     invoiceNumber: invoice.invoiceNumber,
     reservation: invoice.reservationNumber,
+    customerName: invoice.customerName,
     items: invoice.items.map(item => ({
       description: item.description,
       checkIn: new Date(item.checkIn).toLocaleDateString('en-GB'),
@@ -48,67 +50,44 @@ function InvoicePreview({ invoice, onClose }) {
       const blob = await pdf(<InvoiceTemplate hotel={invoice.property} invoiceData={invoiceData} />).toBlob();
       console.log('PDF generated for email');
       
-      // Get default emails and clean them
-      const apiUrl = 'http://37.27.142.148:5171';
-      const defaultEmailsResponse = await fetch(`${apiUrl}/settings/emails`, {
-        headers: {
-          'Accept': 'text/plain',
-          'Content-Type': 'text/plain'
-        },
-        credentials: 'include'
-      });
-      
-      const defaultEmailsText = await defaultEmailsResponse.text();
-      const defaultEmails = defaultEmailsText
-        .split('\n')
-        .map(email => email.trim())
-        .filter(email => email && email.includes('@'));
+      // Get default emails using email service
+      const emailService = createEmailService();
+      const defaultEmails = await emailService.getAllEmails();
       
       if (defaultEmails.length === 0) {
-        throw new Error('No valid email addresses found in settings');
+        throw new Error('No valid email addresses found in settings. Please configure email recipients in Settings.');
       }
-      
+
       // Convert blob to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64data = reader.result.split(',')[1];
-        
-        // Send to all recipients from settings
-        for (const recipient of defaultEmails) {
-          const emailData = {
-            to: recipient,
-            subject: `Invoice #${invoice.invoiceNumber} from ${invoice.property}`,
-            text: `Please find attached your Invoice #${invoice.invoiceNumber}.`,
-            attachments: [{
-              filename: `invoice-${invoice.invoiceNumber}.pdf`,
-              content: base64data,
-              encoding: 'base64',
-              contentType: 'application/pdf'
-            }]
-          };
+      const base64data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
 
-          const response = await fetch('http://37.27.142.148:3000/email/send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify(emailData)
-          });
+      // Send to all recipients
+      for (const recipient of defaultEmails) {
+        console.log('Sending email to:', recipient);
+        const emailData = {
+          to: recipient,
+          subject: `Invoice #${invoice.invoiceNumber} from ${invoice.property}`,
+          text: `Please find attached your Invoice #${invoice.invoiceNumber}.`,
+          attachments: [{
+            filename: `invoice-${invoice.invoiceNumber}.pdf`,
+            content: base64data,
+            encoding: 'base64',
+            contentType: 'application/pdf'
+          }]
+        };
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-          }
-        }
+        await emailService.sendEmail(emailData);
+      }
 
-        console.log('Emails sent successfully to all recipients');
-        alert('Emails sent successfully!');
-      };
+      alert('Invoice sent successfully to all recipients!');
     } catch (error) {
       console.error('Error sending email:', error);
-      alert('Failed to send email. Please try again.');
+      alert('Failed to send email: ' + error.message);
     }
   };
 

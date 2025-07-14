@@ -8,7 +8,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 5172,
-        VITE_API_URL: 'http://37.27.142.148:5171'
+        VITE_API_URL: 'https://veraclub.hotelonline.co:3000'
       },
       instances: 1,
       autorestart: true,
@@ -21,10 +21,11 @@ module.exports = {
       cwd: './',
       env: {
         NODE_ENV: 'production',
-        PORT: 5171,
+        PORT: 3000,
         JWT_SECRET: 'hotelonline-api-secret-key',
-        API_BASE_URL: 'http://37.27.142.148:3000',
-        CORS_ORIGIN: 'http://37.27.142.148:5172'
+        API_BASE_URL: 'https://veraclub.hotelonline.co:3000',
+        CORS_ORIGIN: 'https://veraclub.hotelonline.co',
+        DATA_DIR: '/home/endreo/web/veraclub.hotelonline.co/private/data'
       },
       instances: 1,
       autorestart: true,
