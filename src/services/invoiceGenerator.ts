@@ -1,6 +1,11 @@
 import { Invoice, Reservation } from '../types';
 import { hotels } from '../data/hotels';
 
+// Utility function to round to nearest 0.5 or whole number
+const roundToNearestHalf = (value: number): number => {
+  return Math.round(value * 2) / 2;
+};
+
 // Mock reservation data - in a real app, this would come from an API
 const mockReservations: Record<string, Reservation> = {
   '618': {
@@ -39,10 +44,10 @@ export function generateInvoice(reservationNumber: string): Invoice | null {
     return null;
   }
 
-  const roomTotal = reservation.numberOfRooms * reservation.numberOfNights * reservation.ratePerNight;
-  const mealPlanTotal = reservation.numberOfRooms * reservation.numberOfNights * reservation.mealPlanRate;
-  const subtotal = roomTotal + mealPlanTotal;
-  const tax = subtotal * 0.10; // 10% tax rate
+  const roomTotal = roundToNearestHalf(reservation.numberOfRooms * reservation.numberOfNights * reservation.ratePerNight);
+  const mealPlanTotal = roundToNearestHalf(reservation.numberOfRooms * reservation.numberOfNights * reservation.mealPlanRate);
+  const subtotal = roundToNearestHalf(roomTotal + mealPlanTotal);
+  const tax = roundToNearestHalf(subtotal * 0.10); // 10% tax rate
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -61,19 +66,19 @@ export function generateInvoice(reservationNumber: string): Invoice | null {
       {
         description: `${reservation.roomType} - ${reservation.numberOfNights} nights`,
         quantity: reservation.numberOfRooms * reservation.numberOfNights,
-        unitPrice: reservation.ratePerNight,
+        unitPrice: roundToNearestHalf(reservation.ratePerNight),
         total: roomTotal,
       },
       {
         description: `${reservation.mealPlan} Meal Plan`,
         quantity: reservation.numberOfRooms * reservation.numberOfNights,
-        unitPrice: reservation.mealPlanRate,
+        unitPrice: roundToNearestHalf(reservation.mealPlanRate),
         total: mealPlanTotal,
       },
     ],
     subtotal,
     tax,
-    total: subtotal + tax,
+    total: roundToNearestHalf(subtotal + tax),
     status: 'draft',
     notes: 'Thank you for choosing Veraclub Zanzibar!',
   };

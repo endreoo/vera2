@@ -10,6 +10,11 @@ import { hotels } from '../data/hotels';
 import { pdf } from '@react-pdf/renderer';
 import { createEmailService } from '../services/emailService';
 
+// Utility function to round to nearest 0.5 or whole number
+const roundToNearestHalf = (value) => {
+  return Math.round(value * 2) / 2;
+};
+
 function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -117,9 +122,9 @@ function Dashboard() {
           const ratePerNight = bookingTran.RentalInfo[0].RentPreTax;
           
           // Calculate subtotal and VAT
-          const subtotal = ratePerNight * nights;
-          const vatAmount = subtotal * 0.15;
-          const total = subtotal * 1.15;
+          const subtotal = roundToNearestHalf(ratePerNight * nights);
+          const vatAmount = roundToNearestHalf(subtotal * 0.15);
+          const total = roundToNearestHalf(subtotal * 1.15);
           
           // Get main guest details
           const mainGuest = `${bookingTran.Salutation} ${bookingTran.FirstName} ${bookingTran.LastName}`;
@@ -144,7 +149,7 @@ function Dashboard() {
             checkIn: bookingTran.Start,
             checkOut: bookingTran.End,
             nights: nights,
-            ratePerNight: parseFloat(ratePerNight),
+            ratePerNight: roundToNearestHalf(parseFloat(ratePerNight)),
             subtotal: subtotal,
             vat: vatAmount,
             total: total
@@ -156,9 +161,9 @@ function Dashboard() {
       }
 
       // Calculate grand totals
-      const totalSubtotal = lineItems.reduce((sum, item) => sum + item.subtotal, 0);
-      const totalVAT = lineItems.reduce((sum, item) => sum + item.vat, 0);
-      const grandTotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+      const totalSubtotal = roundToNearestHalf(lineItems.reduce((sum, item) => sum + item.subtotal, 0));
+      const totalVAT = roundToNearestHalf(lineItems.reduce((sum, item) => sum + item.vat, 0));
+      const grandTotal = roundToNearestHalf(lineItems.reduce((sum, item) => sum + item.total, 0));
 
       // Generate invoice from booking data
       const newInvoice = {
